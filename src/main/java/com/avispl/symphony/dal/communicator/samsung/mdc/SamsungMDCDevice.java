@@ -3,17 +3,32 @@
  */
 package com.avispl.symphony.dal.communicator.samsung.mdc;
 
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.commandNames;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.commands;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.inputNames;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.inputs;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.powerStatus;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.powerStatusNames;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.statusCodes;
+import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.statusNames;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.dal.communicator.SocketCommunicator;
-
-import java.io.IOException;
-import java.util.*;
-
-import static com.avispl.symphony.dal.communicator.samsung.mdc.SamsungMDCConstants.*;
 
 public class SamsungMDCDevice extends SocketCommunicator implements Controller, Monitorable {
 
@@ -27,7 +42,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         super();
 
         this.setPort(1515);
-        this.monitorID = 1;
+        this.monitorID = 0;
 
         // set list of command success strings (included at the end of response when command succeeds, typically ending with command prompt)
         this.setCommandSuccessList(Collections.singletonList("A"));

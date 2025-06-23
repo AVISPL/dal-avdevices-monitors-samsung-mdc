@@ -26,12 +26,16 @@ class SamsungMDCConstants {
     }};
 
     //Input values
-    enum inputNames {OFF,HDMI_1,HDMI_2,PC,DVI,DVI_VIDEO,COMPONENT,RF,DTV,DISPLAYPORT,MAGIC_INFO}
+    enum inputNames {
+        OFF,HDMI_1,HDMI_2,HDMI_3,PC,DVI,DVI_VIDEO,COMPONENT, RF,DTV,DISPLAYPORT,
+        MAGIC_INFO,WIDI_OR_SCREEN_MIRRORING,URL_LAUNCHER
+    }
     //Inputs HEX values map
     final static Map<inputNames, Byte> inputs = new HashMap<inputNames, Byte>() {{
         put(inputNames.OFF, (byte)0x01);
         put(inputNames.HDMI_1, (byte)0x21);
         put(inputNames.HDMI_2, (byte)0x23);
+        put(inputNames.HDMI_3, (byte)0x31);
         put(inputNames.PC, (byte)0x15);
         put(inputNames.DVI, (byte)0x18);
         put(inputNames.DVI_VIDEO, (byte)0x1F);
@@ -40,6 +44,8 @@ class SamsungMDCConstants {
         put(inputNames.DTV, (byte)0x40);
         put(inputNames.DISPLAYPORT, (byte)0x25);
         put(inputNames.MAGIC_INFO, (byte)0x20);
+        put(inputNames.WIDI_OR_SCREEN_MIRRORING, (byte)0x61);
+        put(inputNames.URL_LAUNCHER, (byte)0x63);
     }};
 
     //status codes values
