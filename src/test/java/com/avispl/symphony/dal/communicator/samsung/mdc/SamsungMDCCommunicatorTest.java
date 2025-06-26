@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.communicator.samsung.mdc;
 
 import java.util.Map;
@@ -10,10 +13,10 @@ import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 
 
 /**
- * Unit tests for the {@code SurgeXDefenderCommunicator} class.
+ * Unit tests for the {@code SamsungMDCDevice} class.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.0.0
+ * @since 1.2.0
  */
 class SamsungMDCCommunicatorTest {
 	private ExtendedStatistics extendedStatistics;
