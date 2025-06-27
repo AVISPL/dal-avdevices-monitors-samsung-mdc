@@ -16,6 +16,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.collections.CollectionUtils;
+
+import com.avispl.symphony.api.common.error.NotImplementedException;
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
@@ -34,7 +37,21 @@ import com.avispl.symphony.dal.communicator.samsung.mdc.types.StatusCode;
 import com.avispl.symphony.dal.communicator.samsung.mdc.types.properties.AdapterMetadataProperty;
 import com.avispl.symphony.dal.communicator.samsung.mdc.types.properties.GeneralProperty;
 
+/**
+ * Main adapter class for Samsung MDC.
+ * Responsible for generating monitoring, controllable.
+ *
+ * @author Kevin / Symphony Dev Team
+ * @since 1.2.0
+ */
 public class SamsungMDCDevice extends SocketCommunicator implements Controller, Monitorable {
+    /**
+     * Set of property names supported for historical data tracking.
+     */
+    private static final Set<String> SUPPORTED_HISTORICAL_PROPS = new HashSet<>(Collections.singletonList(
+        GeneralProperty.TEMPERATURE.getName()
+    ));
+
     /**
      * Lock used to ensure thread-safe operations.
      */
@@ -65,7 +82,10 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      */
     private InputSource inputSource;
 
-    private int monitorID;
+    /**
+     * The ID of the MDC device
+     */
+    private int deviceId;
     private Set<String> historicalProperties = new HashSet<>();
 
     /**
@@ -81,7 +101,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.statusControl = new StatusControl();
         this.inputSource = null;
 
-        this.monitorID = 0;
+        this.deviceId = 0;
 
         this.setCommandSuccessList(Collections.singletonList("A"));
         this.setCommandErrorList(Collections.singletonList("ERROR"));
@@ -110,12 +130,22 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         });
     }
 
-    public int getMonitorID() {
-        return monitorID;
+    /**
+     * Retrieves {@link #deviceId}
+     *
+     * @return value of {@link #deviceId}
+     */
+    public int getDeviceId() {
+        return deviceId;
     }
 
-    public void setMonitorID(int monitorID) {
-        this.monitorID = monitorID;
+    /**
+     * Sets {@link #deviceId} value
+     *
+     * @param deviceId new value of {@link #deviceId}
+     */
+    public void setDeviceId(int deviceId) {
+        this.deviceId = deviceId;
     }
 
     @Override
@@ -126,16 +156,29 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
             } else if (controllableProperty.getValue().toString().equals("0")) {
                 powerOFF();
             }
+        } else if (controllableProperty.getProperty().equals(GeneralProperty.INPUT.getName())) {
+            InputSource input = InputSource.getByName(controllableProperty.getValue().toString());
+            byte[] req = Util.buildSendString((byte) this.deviceId, Command.INPUT_SOURCE.getCode(), new byte[] { input.getCode() });
+            byte[] res = this.send(req);
+            if (this.digestResponse(res, Command.INPUT_SOURCE).equals(InputSource.UNDEFINED)) {
+                throw new NotImplementedException(String.format(Constant.SET_INPUT_FAILED, input.getName()));
+            }
+        } else {
+            this.logger.warn(Constant.CONTROL_PROPERTY_FAILED + controllableProperty.getProperty());
         }
     }
 
     @Override
     public void controlProperties(List<ControllableProperty> controllableProperties) throws Exception {
-        controllableProperties.forEach(p -> {
+        if (CollectionUtils.isEmpty(controllableProperties)) {
+            this.logger.warn(Constant.CONTROLLABLE_PROPS_EMPTY_WARNING);
+            return;
+        }
+        controllableProperties.forEach(controllableProperty -> {
             try {
-                controlProperty(p);
+                this.controlProperty(controllableProperty);
             } catch (Exception e) {
-                e.printStackTrace();
+                this.logger.error(Constant.CONTROL_PROPERTY_FAILED + controllableProperty.getProperty(), e);
             }
         });
     }
@@ -154,7 +197,8 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
             statistics.putAll(this.generateAdapterMetadataProperties());
 
             extendedStatistics.setStatistics(statistics);
-            extendedStatistics.setControllableProperties(this.generateControllableProperties());
+            extendedStatistics.setControllableProperties(this.generateGeneralControls());
+            extendedStatistics.setDynamicStatistics(this.generateDynamicStatistics(statistics));
             this.localExtendedStatistics = extendedStatistics;
         } finally {
             this.reentrantLock.unlock();
@@ -256,15 +300,45 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      *
      * @return a list of {@code AdvancedControllableProperty} instances representing the device's controls
      */
-    private List<AdvancedControllableProperty> generateControllableProperties() {
+    private List<AdvancedControllableProperty> generateGeneralControls() {
         List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
-        controllableProperties.add(this.generateControllableSwitch(
-            GeneralProperty.POWER.getName(),
-            Constant.ON, Constant.OFF,
-            (int) this.powerControl.getCode()
-        ));
+        if (this.powerControl == null) {
+            this.logger.warn(Constant.POWER_CONTROL_NULL_WARNING);
+        } else {
+            controllableProperties.add(this.generateControllableSwitch(
+                GeneralProperty.POWER.getName(), Constant.ON, Constant.OFF, (int) this.powerControl.getCode()
+            ));
+        }
+        if (this.inputSource == null || this.inputSource.equals(InputSource.UNDEFINED)) {
+            this.logger.warn(String.format(Constant.INPUT_SOURCE_NULL_WARNING, this.inputSource));
+        } else {
+            controllableProperties.add(this.generateControllableDropdown(
+                GeneralProperty.INPUT.getName(), InputSource.getNames(), InputSource.getNames(), this.inputSource.getName()
+            ));
+        }
 
         return controllableProperties;
+    }
+
+    private Map<String, String> generateDynamicStatistics(Map<String, String> statistics) {
+        if (this.statusControl == null) {
+            this.logger.warn(Constant.STATUS_CONTROL_NULL_WARNING);
+            return Collections.emptyMap();
+        }
+        if (CollectionUtils.isEmpty(this.historicalProperties)) {
+            this.logger.warn(Constant.HISTORICAL_PROPS_EMPTY_WARNING);
+            return Collections.emptyMap();
+        }
+
+        Map<String, String> dynamicStatistics = new HashMap<>();
+        this.historicalProperties.forEach(property -> {
+            String value = statistics.get(property);
+            if (SUPPORTED_HISTORICAL_PROPS.contains(property) && value != null) {
+                dynamicStatistics.put(property, value);
+            }
+        });
+
+        return dynamicStatistics;
     }
 
     /**
@@ -273,7 +347,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * @return powerStatusNames This returns the calculated xor checksum.
      */
     private PowerControl getPower() throws Exception {
-        byte[] response = this.send(Util.buildSendString((byte) monitorID, Command.POWER.getCode()));
+        byte[] response = this.send(Util.buildSendString((byte) deviceId, Command.POWER.getCode()));
         PowerControl power = (PowerControl) this.digestResponse(response, Command.POWER);
 
         if (power == null) {
@@ -287,7 +361,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * This method is used to send the power ON command to the display
      */
     private void powerON() throws IOException {
-        byte[] toSend = Util.buildSendString((byte) monitorID, Command.POWER.getCode(), new byte[] { PowerControl.ON.getCode() });
+        byte[] toSend = Util.buildSendString((byte) deviceId, Command.POWER.getCode(), new byte[] { PowerControl.ON.getCode() });
         try {
             byte[] response = send(toSend);
 
@@ -310,7 +384,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * This method is used to send the power OFF command to the display
      */
     private void powerOFF() throws IOException {
-        byte[] toSend = Util.buildSendString((byte) monitorID, Command.POWER.getCode(), new byte[] { PowerControl.OFF.getCode() });
+        byte[] toSend = Util.buildSendString((byte) deviceId, Command.POWER.getCode(), new byte[] { PowerControl.OFF.getCode() });
         try {
             byte[] response = send(toSend);
 
@@ -328,7 +402,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * @return inputNames This returns the current input.
      */
     private InputSource getInput() throws Exception {
-        byte[] response = send(Util.buildSendString((byte) monitorID, Command.INPUT_SOURCE.getCode()));
+        byte[] response = send(Util.buildSendString((byte) deviceId, Command.INPUT_SOURCE.getCode()));
         InputSource input = (InputSource) digestResponse(response, Command.INPUT_SOURCE);
 
         if (input == null) {
@@ -344,7 +418,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * @return SamsungMDCStatus This returns the retrieved status results.
      */
     private StatusControl getStatus() throws Exception {
-        byte[] response = send(Util.buildSendString((byte) monitorID, Command.STATUS.getCode()));
+        byte[] response = send(Util.buildSendString((byte) deviceId, Command.STATUS.getCode()));
         StatusControl status = (StatusControl) digestResponse(response, Command.STATUS);
 
         if (status == null) {
@@ -372,6 +446,23 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
     }
 
     /**
+     * Generates an {@link AdvancedControllableProperty} of type Dropdown with the specified name, labels, options, and value.
+     *
+     * @param dropdownName the name of the dropdown control property
+     * @param labels       the display labels for each dropdown option
+     * @param options      the actual option values associated with each label
+     * @param value        the initial selected value of the dropdown
+     * @return an {@link AdvancedControllableProperty} configured as a dropdown control
+     */
+    private AdvancedControllableProperty generateControllableDropdown(String dropdownName, String[] labels, String[] options, Object value) {
+        AdvancedControllableProperty.DropDown dropdown = new AdvancedControllableProperty.DropDown();
+        dropdown.setLabels(labels);
+        dropdown.setOptions(options);
+
+        return new AdvancedControllableProperty(dropdownName, new Date(), dropdown, value);
+    }
+
+    /**
      * This method is used to digest the response received from the device
      *
      * @param responseBytes This is the response to be digested
@@ -379,7 +470,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * @return Object This returns the result digested from the response.
      */
     private Object digestResponse(byte[] responseBytes, Command expectedResponse) {
-        byte checkSum = Util.checkSum(java.util.Arrays.copyOfRange(responseBytes, 1, responseBytes.length - 1));
+        byte checkSum = Util.checkSum(Arrays.copyOfRange(responseBytes, 1, responseBytes.length - 1));
 
         if (checkSum == responseBytes[responseBytes.length - 1]) {
             switch (responseBytes[4]) {
@@ -401,14 +492,14 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
                             if (responseBytes[5] != Command.STATUS.getCode()) {
                                 throw new ResourceNotReachableException("Unexpected response");
                             }
-                            StatusControl statusControl = new StatusControl();
-                            statusControl.setLamp(StatusCode.getByStatusControlProperty("lamp", responseBytes[6]));
-                            statusControl.setTemperature(StatusCode.getByStatusControlProperty("temperature", responseBytes[7]));
-                            statusControl.setNoSync(StatusCode.getByStatusControlProperty("noSync", responseBytes[9]));
-                            statusControl.setCurrentTemperature(responseBytes[10]);
-                            statusControl.setFan(StatusCode.getByStatusControlProperty("fan", responseBytes[11]));
+                            StatusControl status = new StatusControl();
+                            status.setLamp(StatusCode.getByStatusControlProperty("lamp", responseBytes[6]));
+                            status.setTemperature(StatusCode.getByStatusControlProperty("temperature", responseBytes[7]));
+                            status.setNoSync(StatusCode.getByStatusControlProperty("noSync", responseBytes[9]));
+                            status.setCurrentTemperature(responseBytes[10]);
+                            status.setFan(StatusCode.getByStatusControlProperty("fan", responseBytes[11]));
 
-                            return statusControl;
+                            return status;
                         }
                     }
                     break;
@@ -419,13 +510,13 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
                             if (this.logger.isErrorEnabled()) {
                                 this.logger.error("error: Power command returned NAK: " + this.host + " port: " + this.getPort());
                             }
-                            throw new RuntimeException("Power command returned NAK");
+                            throw new ResourceNotReachableException("Power command returned NAK");
                         }
                         case INPUT_SOURCE: {
                             if (responseBytes[5] != Command.INPUT_SOURCE.getCode()) {
                                 throw new ResourceNotReachableException("Unexpected response");
                             }
-                            return InputSource.getByCode(responseBytes[6]);
+                            return InputSource.UNDEFINED;
                         }
                     }
                     break;

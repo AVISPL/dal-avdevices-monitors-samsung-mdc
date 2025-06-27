@@ -103,7 +103,7 @@ public class Util {
      */
     public static String mapToGeneralProperty(PowerControl powerControl) {
         if (powerControl == null) {
-            LOGGER.warn(String.format(Constant.PARAM_NULL_WARN, "powerControl"));
+            LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "powerControl"));
             return Constant.NONE;
         }
 
@@ -119,7 +119,7 @@ public class Util {
      */
     public static String mapToGeneralProperty(GeneralProperty property, StatusControl statusControl) {
         if (statusControl == null) {
-            LOGGER.warn(String.format(Constant.PARAM_NULL_WARN, "statusControl"));
+            LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "statusControl"));
             return Constant.NONE;
         }
 
@@ -149,7 +149,7 @@ public class Util {
      */
     public static String mapToGeneralProperty(InputSource inputSource) {
         if (inputSource == null) {
-            LOGGER.warn(String.format(Constant.PARAM_NULL_WARN, "inputSource"));
+            LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "inputSource"));
             return Constant.NONE;
         }
 

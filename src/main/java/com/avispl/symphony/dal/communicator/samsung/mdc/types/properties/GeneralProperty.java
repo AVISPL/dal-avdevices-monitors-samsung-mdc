@@ -11,7 +11,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.types.properties;
  * @since 1.2.0
  */
 public enum GeneralProperty {
-	FAN("FAN"),
+	FAN("Fan"),
 	INPUT("Input"),
 	LAMP("Lamp"),
 	POWER("Power"),

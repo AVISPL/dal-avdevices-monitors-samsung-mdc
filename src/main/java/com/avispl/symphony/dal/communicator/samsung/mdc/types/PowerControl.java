@@ -38,8 +38,6 @@ public enum PowerControl {
 	 * @return the matching {@code PowerControl}, or {@code null} if no match is found
 	 */
 	public static PowerControl getByCode(byte code) {
-		return Arrays.stream(PowerControl.values())
-				.filter(p -> p.code == code).findFirst()
-				.orElse(null);
+		return Arrays.stream(values()).filter(p -> p.code == code).findFirst().orElse(null);
 	}
 }
