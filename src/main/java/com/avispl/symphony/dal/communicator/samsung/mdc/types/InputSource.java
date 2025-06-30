@@ -15,7 +15,7 @@ import com.avispl.symphony.dal.communicator.samsung.mdc.common.Constant;
  * @since 1.2.0
  */
 public enum InputSource {
-	UNDEFINED(Constant.NONE, (byte) 0x4E),
+	UNDEFINED(Constant.NOT_AVAILABLE, (byte) 0x4E),
 	S_VIDEO("S-Video", (byte) 0x04),
 	COMPONENT("Component", (byte) 0x08),
 	AV1_AV("AV", (byte) 0x0C),

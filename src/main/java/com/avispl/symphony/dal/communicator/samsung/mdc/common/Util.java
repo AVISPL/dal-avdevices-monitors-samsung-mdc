@@ -99,12 +99,12 @@ public class Util {
      * Maps the given {@link PowerControl} state to a general property string.
      *
      * @param powerControl the power control state to map
-     * @return the mapped value, or {@code Constant.NONE} if input is null
+     * @return the mapped value, or {@code Constant.NOT_AVAILABLE} if input is null
      */
     public static String mapToGeneralProperty(PowerControl powerControl) {
         if (powerControl == null) {
             LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "powerControl"));
-            return Constant.NONE;
+            return Constant.NOT_AVAILABLE;
         }
 
         return powerControl == PowerControl.ON ? "1" : "0";
@@ -115,12 +115,12 @@ public class Util {
      *
      * @param property the general property to map
      * @param statusControl the status control object containing current statuses
-     * @return a string representing the property's value or {@code Constant.NONE} if invalid
+     * @return a string representing the property's value or {@code Constant.NOT_AVAILABLE} if invalid
      */
     public static String mapToGeneralProperty(GeneralProperty property, StatusControl statusControl) {
         if (statusControl == null) {
             LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "statusControl"));
-            return Constant.NONE;
+            return Constant.NOT_AVAILABLE;
         }
 
         switch (property) {
@@ -136,7 +136,7 @@ public class Util {
                 return mapToValue(statusControl.getFan().getName());
             default: {
                 LOGGER.warn(String.format(Constant.UNSUPPORTED_MAP_PROPERTY_WARNING, "mapToGeneralProperty", property));
-                return Constant.NONE;
+                return Constant.NOT_AVAILABLE;
             }
         }
     }
@@ -145,12 +145,12 @@ public class Util {
      * Maps the given {@link InputSource} to its display name.
      *
      * @param inputSource the input source to map
-     * @return the input source name, or {@code Constant.NONE} if null
+     * @return the input source name, or {@code Constant.NOT_AVAILABLE} if null
      */
     public static String mapToGeneralProperty(InputSource inputSource) {
         if (inputSource == null) {
             LOGGER.warn(String.format(Constant.PARAM_NULL_WARNING, "inputSource"));
-            return Constant.NONE;
+            return Constant.NOT_AVAILABLE;
         }
 
         return inputSource.getName();
@@ -161,7 +161,7 @@ public class Util {
      *
      * @param versionProperties the source of property values
      * @param property the property to map
-     * @return the formatted value, or {@code Constant.NONE} if not available
+     * @return the formatted value, or {@code Constant.NOT_AVAILABLE} if not available
      */
     public static String mapToAdapterMetadataProperty(Properties versionProperties, AdapterMetadataProperty property) {
         String adapterBuildDate = versionProperties.getProperty("adapter.build.date");
@@ -177,7 +177,7 @@ public class Util {
                 return mapToValue(adapterVersion);
             default:
                 LOGGER.warn(String.format(Constant.UNSUPPORTED_MAP_PROPERTY_WARNING, "mapToAdapterMetadataProperty", property));
-                return Constant.NONE;
+                return Constant.NOT_AVAILABLE;
         }
     }
 
@@ -185,7 +185,7 @@ public class Util {
      * Maps a string value to itself if not null or empty; otherwise returns null.
      */
     private static String mapToValue(String value) {
-        return StringUtils.isNotNullOrEmpty(value) ? value : Constant.NONE;
+        return StringUtils.isNotNullOrEmpty(value) ? value : Constant.NOT_AVAILABLE;
     }
 
     /**
@@ -197,12 +197,12 @@ public class Util {
      *
      * @param uptime the start time in milliseconds as a string (e.g., "1717581000000")
      * @return a formatted duration string like "2 day(s) 3 hour(s) 15 minute(s) 42 second(s)",
-     * or {@link Constant#NONE} if parsing fails
+     * or {@link Constant#NOT_AVAILABLE} if parsing fails
      */
     private static String mapToUptime(String uptime) {
         try {
             if (StringUtils.isNullOrEmpty(uptime)) {
-                return Constant.NONE;
+                return Constant.NOT_AVAILABLE;
             }
 
             long uptimeSecond = (System.currentTimeMillis() - Long.parseLong(uptime)) / 1000;
@@ -225,7 +225,7 @@ public class Util {
             return rs.toString().trim();
         } catch (Exception e) {
             LOGGER.error(Constant.MAP_ELAPSED_TIME_FAILED + uptime, e);
-            return Constant.NONE;
+            return Constant.NOT_AVAILABLE;
         }
     }
 

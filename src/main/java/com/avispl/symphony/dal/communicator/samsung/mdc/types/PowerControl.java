@@ -13,6 +13,7 @@ import java.util.Arrays;
  * @since 1.2.0
  */
 public enum PowerControl {
+	UNDEFINED((byte) 0x4E),
 	OFF((byte) 0x00),
 	ON((byte) 0x01);
 
@@ -38,6 +39,6 @@ public enum PowerControl {
 	 * @return the matching {@code PowerControl}, or {@code null} if no match is found
 	 */
 	public static PowerControl getByCode(byte code) {
-		return Arrays.stream(values()).filter(p -> p.code == code).findFirst().orElse(null);
+		return Arrays.stream(values()).filter(p -> p.code == code).findFirst().orElse(UNDEFINED);
 	}
 }

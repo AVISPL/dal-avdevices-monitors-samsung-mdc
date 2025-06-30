@@ -97,9 +97,9 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.adapterInitializationTimestamp = System.currentTimeMillis();
 
         this.localExtendedStatistics = new ExtendedStatistics();
-        this.powerControl = null;
+        this.powerControl = PowerControl.UNDEFINED;
         this.statusControl = new StatusControl();
-        this.inputSource = null;
+        this.inputSource = InputSource.UNDEFINED;
 
         this.deviceId = 0;
 
@@ -115,7 +115,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * @return value of {@link #historicalProperties}
      */
     public String getHistoricalProperties() {
-        return String.join(",", this.historicalProperties);
+        return String.join(Constant.COMMA, this.historicalProperties);
     }
 
     /**
@@ -125,9 +125,8 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      */
     public void setHistoricalProperties(String historicalProperties) {
         this.historicalProperties.clear();
-        Arrays.asList(historicalProperties.split(",")).forEach(propertyName -> {
-            this.historicalProperties.add(propertyName.trim());
-        });
+        Arrays.asList(historicalProperties.split(Constant.COMMA))
+            .forEach(propertyName -> this.historicalProperties.add(propertyName.trim()));
     }
 
     /**
@@ -320,6 +319,13 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         return controllableProperties;
     }
 
+    /**
+     * Filters the input statistics to include only supported historical properties.
+     *
+     * @param statistics A map of all available statistics.
+     * @return A map containing only the supported historical properties and their values,
+     * or an empty map if the statusControl, historical properties, or input map is null/empty.
+     */
     private Map<String, String> generateDynamicStatistics(Map<String, String> statistics) {
         if (this.statusControl == null) {
             this.logger.warn(Constant.STATUS_CONTROL_NULL_WARNING);

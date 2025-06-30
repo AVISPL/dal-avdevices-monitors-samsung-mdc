@@ -22,6 +22,7 @@ public class Constant {
 
   //	Values
   public static final byte COMMAND_HEADER = (byte) 0xAA;
+  public static final String NOT_AVAILABLE = "N/A";
   public static final String NONE = "None";
   public static final String ON = "On";
   public static final String OFF = "Off";
