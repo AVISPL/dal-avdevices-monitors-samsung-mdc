@@ -1,19 +1,28 @@
+/*
+ * Copyright (c) 2022 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.communicator.samsung.mdc;
 
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
+import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
+import com.avispl.symphony.dal.communicator.samsung.mdc.types.InputSource;
+import com.avispl.symphony.dal.communicator.samsung.mdc.types.properties.AdapterMetadataProperty;
+import com.avispl.symphony.dal.communicator.samsung.mdc.types.properties.GeneralProperty;
 
 
 /**
- * Unit tests for the {@code SurgeXDefenderCommunicator} class.
+ * Unit tests for the {@code SamsungMDCDevice} class.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.0.0
+ * @since 1.2.0
  */
 class SamsungMDCCommunicatorTest {
 	private ExtendedStatistics extendedStatistics;
@@ -38,8 +47,28 @@ class SamsungMDCCommunicatorTest {
 
 	@Test
 	void testGetMultipleStatistics() throws Exception {
+		this.communicator.setHistoricalProperties(GeneralProperty.TEMPERATURE.getName());
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = this.extendedStatistics.getStatistics();
-		System.out.println(statistics);
+		int expectedStatisticSize = GeneralProperty.values().length + AdapterMetadataProperty.values().length;
+
+		Assertions.assertEquals(statistics.size(), expectedStatisticSize, "Statistics have unexpected number of properties");
+	}
+
+	@Test
+	void testControlInput() throws Exception {
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+
+		ControllableProperty controllableProperty = new ControllableProperty();
+		controllableProperty.setProperty(GeneralProperty.INPUT.getName());
+		controllableProperty.setValue(InputSource.HDMI1.getName());
+		this.communicator.controlProperty(controllableProperty);
+
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		AdvancedControllableProperty comparedControllableProperty = this.extendedStatistics.getControllableProperties().stream()
+				.filter(property -> property.getName().equals(GeneralProperty.INPUT.getName())).findFirst().orElse(null);
+
+		Assertions.assertNotNull(comparedControllableProperty, "ComparedControllableProperty is null");
+		Assertions.assertEquals(controllableProperty.getValue(), comparedControllableProperty.getValue(), "ComparedControllableProperty have unexpected value");
 	}
 }
