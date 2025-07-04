@@ -12,7 +12,7 @@ import com.avispl.symphony.dal.communicator.samsung.mdc.types.StatusCode;
  * This class is typically used to encapsulate the overall health or status of the device.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public class StatusControl {
     private StatusCode lamp;

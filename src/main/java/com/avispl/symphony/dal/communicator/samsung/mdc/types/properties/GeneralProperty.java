@@ -8,7 +8,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.types.properties;
  * Each property corresponds to a display name or configuration aspect of the general.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum GeneralProperty {
 	FAN("Fan"),

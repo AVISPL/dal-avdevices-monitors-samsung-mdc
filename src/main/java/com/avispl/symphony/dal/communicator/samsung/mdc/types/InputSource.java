@@ -12,7 +12,7 @@ import com.avispl.symphony.dal.communicator.samsung.mdc.common.Constant;
  * Each input source includes a display name and its corresponding byte code used for identifying the source in MDC device.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum InputSource {
 	UNDEFINED(Constant.NOT_AVAILABLE, (byte) 0x4E),

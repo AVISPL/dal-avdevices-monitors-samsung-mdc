@@ -12,7 +12,7 @@ import java.util.EnumSet;
  * Note: Some statuses may share the same byte value but differ in context or meaning.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum StatusCode {
 	NORMAL("Normal", (byte) 0x00),

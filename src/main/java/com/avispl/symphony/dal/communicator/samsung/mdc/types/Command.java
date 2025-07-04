@@ -8,7 +8,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.types;
  * Each command corresponds to a specific operation or control signal sent to the device.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum Command {
 	STATUS((byte) 0x0D),
