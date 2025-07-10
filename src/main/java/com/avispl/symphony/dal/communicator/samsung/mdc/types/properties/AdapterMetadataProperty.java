@@ -9,6 +9,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.types.properties;
 public enum AdapterMetadataProperty {
 	ADAPTER_BUILD_DATE("AdapterBuildDate"),
 	ADAPTER_UPTIME("AdapterUptime"),
+	ADAPTER_UPTIME_MIN("AdapterUptime(min)"),
 	ADAPTER_VERSION("AdapterVersion");
 
 	private final String name;

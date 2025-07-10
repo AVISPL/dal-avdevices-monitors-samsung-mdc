@@ -23,14 +23,10 @@ public class Constant {
   //	Values
   public static final byte COMMAND_HEADER = (byte) 0xAA;
   public static final String NOT_AVAILABLE = "N/A";
-  public static final String NONE = "None";
   public static final String ON = "On";
   public static final String OFF = "Off";
-  public static final char ACK = 'A';
-  public static final char NAK = 'N';
 
   //	Groups
-  public static final String GENERAL_GROUP = "General";
   public static final String ADAPTER_METADATA_GROUP = "AdapterMetadata";
 
   //  Info messages
@@ -51,7 +47,8 @@ public class Constant {
   public static final String SET_UP_DATA_FAILED_1 = "Failed to set up data for ";
   public static final String SET_UP_DATA_FAILED_2 = "Failed to set up data for some reasons, returning the empty list";
   public static final String SET_UP_DATA_FAILED_3 = "Failed to set up data for some reasons, returning the false value";
-  public static final String MAP_ELAPSED_TIME_FAILED = "Failed to mapToElapsedTime with uptime: ";
+  public static final String MAP_TO_UPTIME_FAILED = "Failed to mapToUptime with uptime: ";
+  public static final String MAP_TO_UPTIME_MIN_FAILED = "Failed to mapToUptimeMin with uptime: ";
   public static final String CONTROL_PROPERTY_FAILED = "Failed to control property: ";
-  public static final String SET_INPUT_FAILED = "Failed to set input source %s, may be it's not supported";
+  public static final String SET_INPUT_FAILED = "Failed to change the input source because the selected value %s is not supported.";
 }
