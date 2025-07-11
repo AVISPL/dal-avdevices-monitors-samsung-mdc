@@ -4,7 +4,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.types.properties;
  * Enum representing different types of Adapter metadata.
  *
  * @author Kevin / Symphony Dev Team<br>
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum AdapterMetadataProperty {
 	ADAPTER_BUILD_DATE("AdapterBuildDate"),

@@ -22,7 +22,7 @@ import com.avispl.symphony.dal.communicator.samsung.mdc.types.properties.General
  * Unit tests for the {@code SamsungMDCDevice} class.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 class SamsungMDCCommunicatorTest {
 	private ExtendedStatistics extendedStatistics;

@@ -7,7 +7,7 @@ package com.avispl.symphony.dal.communicator.samsung.mdc.common;
  * Utility class that defines constant values used across the application.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public class Constant {
   private Constant() {

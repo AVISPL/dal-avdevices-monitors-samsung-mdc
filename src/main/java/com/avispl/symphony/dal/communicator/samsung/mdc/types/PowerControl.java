@@ -10,7 +10,7 @@ import java.util.Arrays;
  * Each state corresponds to a byte value used to turn the device on or off.
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public enum PowerControl {
 	UNDEFINED((byte) 0x4E),

@@ -22,7 +22,7 @@ import com.avispl.symphony.dal.util.StringUtils;
  * <p>This class is non-instantiable and provides only static utility methods.</p>
  *
  * @author Kevin / Symphony Dev Team
- * @since 1.2.0
+ * @since 1.1.0
  */
 public class Util {
     private static final Log LOGGER = LogFactory.getLog(Util.class);
