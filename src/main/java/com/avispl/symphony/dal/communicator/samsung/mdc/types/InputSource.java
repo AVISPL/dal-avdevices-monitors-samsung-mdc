@@ -103,7 +103,7 @@ public enum InputSource {
 	public static String[] getNames() {
 		return Arrays.stream(values())
 				.filter(inputSource -> !inputSource.equals(UNDEFINED))
-				.map(inputSource -> inputSource.name).toArray(String[]::new);
+				.map(inputSource -> inputSource.name).sorted().toArray(String[]::new);
 	}
 }
 

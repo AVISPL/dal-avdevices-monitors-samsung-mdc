@@ -18,7 +18,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.collections.CollectionUtils;
 
-import com.avispl.symphony.api.common.error.NotImplementedException;
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
@@ -103,8 +102,8 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
 
         this.deviceId = 0;
 
-        this.setCommandSuccessList(Collections.singletonList("A"));
-        this.setCommandErrorList(Collections.singletonList("ERROR"));
+        this.setCommandSuccessList(Collections.singletonList(""));
+        this.setCommandErrorList(Collections.singletonList(""));
         this.loadProperties(this.versionProperties);
         this.logger.info(Constant.INITIALIZED_SUCCESSFULLY_INFO);
     }
@@ -149,21 +148,24 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
 
     @Override
     public void controlProperty(ControllableProperty controllableProperty) throws Exception {
-        if (controllableProperty.getProperty().equals(GeneralProperty.POWER.getName())) {
-            if (controllableProperty.getValue().toString().equals("1")) {
-                powerON();
-            } else if (controllableProperty.getValue().toString().equals("0")) {
-                powerOFF();
+        this.reentrantLock.lock();
+        try {
+            if (controllableProperty.getProperty().equals(GeneralProperty.POWER.getName())) {
+                if (controllableProperty.getValue().toString().equals("1")) {
+                    powerON();
+                } else if (controllableProperty.getValue().toString().equals("0")) {
+                    powerOFF();
+                }
+            } else if (controllableProperty.getProperty().equals(GeneralProperty.INPUT.getName())) {
+                InputSource updatedInput = InputSource.getByName(controllableProperty.getValue().toString());
+                byte[] req = Util.buildSendString((byte) this.deviceId, Command.INPUT_SOURCE.getCode(), new byte[] { updatedInput.getCode() });
+                byte[] res = this.send(req);
+                if (this.digestResponse(res, Command.INPUT_SOURCE).equals(InputSource.UNDEFINED)) {
+                    throw new UnsupportedOperationException(String.format(Constant.SET_INPUT_FAILED, controllableProperty.getValue()));
+                }
             }
-        } else if (controllableProperty.getProperty().equals(GeneralProperty.INPUT.getName())) {
-            InputSource input = InputSource.getByName(controllableProperty.getValue().toString());
-            byte[] req = Util.buildSendString((byte) this.deviceId, Command.INPUT_SOURCE.getCode(), new byte[] { input.getCode() });
-            byte[] res = this.send(req);
-            if (this.digestResponse(res, Command.INPUT_SOURCE).equals(InputSource.UNDEFINED)) {
-                throw new NotImplementedException(String.format(Constant.SET_INPUT_FAILED, input.getName()));
-            }
-        } else {
-            this.logger.warn(Constant.CONTROL_PROPERTY_FAILED + controllableProperty.getProperty());
+        } finally {
+            this.reentrantLock.unlock();
         }
     }
 
@@ -284,6 +286,10 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         statistics.put(
             String.format(Constant.PROPERTY_FORMAT, Constant.ADAPTER_METADATA_GROUP, AdapterMetadataProperty.ADAPTER_UPTIME.getName()),
             Util.mapToAdapterMetadataProperty(this.versionProperties, AdapterMetadataProperty.ADAPTER_UPTIME)
+        );
+        statistics.put(
+            String.format(Constant.PROPERTY_FORMAT, Constant.ADAPTER_METADATA_GROUP, AdapterMetadataProperty.ADAPTER_UPTIME_MIN.getName()),
+            Util.mapToAdapterMetadataProperty(this.versionProperties, AdapterMetadataProperty.ADAPTER_UPTIME_MIN)
         );
         statistics.put(
             String.format(Constant.PROPERTY_FORMAT, Constant.ADAPTER_METADATA_GROUP, AdapterMetadataProperty.ADAPTER_VERSION.getName()),

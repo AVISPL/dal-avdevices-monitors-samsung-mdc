@@ -56,7 +56,7 @@ class SamsungMDCCommunicatorTest {
 	}
 
 	@Test
-	void testControlInput() throws Exception {
+	void testControlInputWithSupportedInput() throws Exception {
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -70,5 +70,22 @@ class SamsungMDCCommunicatorTest {
 
 		Assertions.assertNotNull(comparedControllableProperty, "ComparedControllableProperty is null");
 		Assertions.assertEquals(controllableProperty.getValue(), comparedControllableProperty.getValue(), "ComparedControllableProperty have unexpected value");
+	}
+
+	@Test
+	void testControlInputWithUnsupportedInput() throws Exception {
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		InputSource currentInput = InputSource.getByName(this.extendedStatistics.getStatistics().get(GeneralProperty.INPUT.getName()));
+
+		ControllableProperty controllableProperty = new ControllableProperty();
+		controllableProperty.setProperty(GeneralProperty.INPUT.getName());
+		controllableProperty.setValue(InputSource.AV1_AV.getName());
+		Assertions.assertThrows(UnsupportedOperationException.class, () -> this.communicator.controlProperty(controllableProperty));
+
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		AdvancedControllableProperty comparedControllableProperty = this.extendedStatistics.getControllableProperties().stream()
+				.filter(property -> property.getName().equals(GeneralProperty.INPUT.getName())).findFirst().orElse(null);
+		Assertions.assertNotNull(comparedControllableProperty, "ComparedControllableProperty is null");
+		Assertions.assertEquals(currentInput.getName(), comparedControllableProperty.getValue(), "ComparedControllableProperty have unexpected value");
 	}
 }
