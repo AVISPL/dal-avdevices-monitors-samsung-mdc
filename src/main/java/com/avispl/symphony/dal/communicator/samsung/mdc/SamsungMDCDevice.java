@@ -4,6 +4,7 @@
 package com.avispl.symphony.dal.communicator.samsung.mdc;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,6 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.collections.CollectionUtils;
 
+import com.avispl.symphony.api.common.error.NotImplementedException;
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
@@ -27,6 +29,7 @@ import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.dal.communicator.SocketCommunicator;
 import com.avispl.symphony.dal.communicator.samsung.mdc.common.Constant;
+import com.avispl.symphony.dal.communicator.samsung.mdc.common.RequestStateHandler;
 import com.avispl.symphony.dal.communicator.samsung.mdc.common.Util;
 import com.avispl.symphony.dal.communicator.samsung.mdc.models.StatusControl;
 import com.avispl.symphony.dal.communicator.samsung.mdc.types.Command;
@@ -69,6 +72,10 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      */
     private ExtendedStatistics localExtendedStatistics;
     /**
+     * Handles request state updates and error tracking.
+     */
+    private RequestStateHandler requestStateHandler;
+    /**
      * Represents the {@link PowerControl} of the adapter.
      */
     private PowerControl powerControl;
@@ -96,16 +103,12 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.adapterInitializationTimestamp = System.currentTimeMillis();
 
         this.localExtendedStatistics = new ExtendedStatistics();
+        this.requestStateHandler = new RequestStateHandler();
         this.powerControl = PowerControl.UNDEFINED;
         this.statusControl = new StatusControl();
         this.inputSource = InputSource.UNDEFINED;
 
         this.deviceId = 0;
-
-        this.setCommandSuccessList(Collections.singletonList(""));
-        this.setCommandErrorList(Collections.singletonList(""));
-        this.loadProperties(this.versionProperties);
-        this.logger.info(Constant.INITIALIZED_SUCCESSFULLY_INFO);
     }
 
     /**
@@ -147,20 +150,26 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
     }
 
     @Override
+    protected void internalInit() throws Exception {
+        this.setCommandSuccessList(Collections.singletonList(""));
+        this.setCommandErrorList(Collections.singletonList(""));
+        this.loadProperties(this.versionProperties);
+        super.internalInit();
+    }
+
+    @Override
     public void controlProperty(ControllableProperty controllableProperty) throws Exception {
         this.reentrantLock.lock();
         try {
             if (controllableProperty.getProperty().equals(GeneralProperty.POWER.getName())) {
-                if (controllableProperty.getValue().toString().equals("1")) {
-                    powerON();
-                } else if (controllableProperty.getValue().toString().equals("0")) {
-                    powerOFF();
-                }
+                byte requestByte = controllableProperty.getValue().toString().equals("1")
+                    ? PowerControl.ON.getCode()
+                    : PowerControl.OFF.getCode();
+                this.performControlOperation(Command.POWER, requestByte);
             } else if (controllableProperty.getProperty().equals(GeneralProperty.INPUT.getName())) {
                 InputSource updatedInput = InputSource.getByName(controllableProperty.getValue().toString());
-                byte[] req = Util.buildSendString((byte) this.deviceId, Command.INPUT_SOURCE.getCode(), new byte[] { updatedInput.getCode() });
-                byte[] res = this.send(req);
-                if (this.digestResponse(res, Command.INPUT_SOURCE).equals(InputSource.UNDEFINED)) {
+                Object response = this.performControlOperation(Command.INPUT_SOURCE, updatedInput.getCode());
+                if (response.equals(InputSource.UNDEFINED)) {
                     throw new UnsupportedOperationException(String.format(Constant.SET_INPUT_FAILED, controllableProperty.getValue()));
                 }
             }
@@ -188,10 +197,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
     public List<Statistics> getMultipleStatistics() throws Exception {
         this.reentrantLock.lock();
         try {
-            if (!this.isDataSetup()) {
-                this.logger.error(Constant.SET_UP_DATA_FAILED_2);
-                return Collections.emptyList();
-            }
+            this.setupData();
             ExtendedStatistics extendedStatistics = new ExtendedStatistics();
             Map<String, String> statistics = new HashMap<>();
             statistics.putAll(this.generateGeneralProperties());
@@ -213,6 +219,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.powerControl = null;
         this.statusControl = null;
         this.inputSource = null;
+        this.requestStateHandler = null;
         this.localExtendedStatistics = null;
         this.historicalProperties = null;
         super.internalDestroy();
@@ -237,20 +244,13 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
     /**
      * Initializes and sets up the device data by retrieving power control, status control,
      * and input source information.
-     *
-     * @return {@code true} if the data is successfully set up; {@code false} otherwise
      */
-    private boolean isDataSetup() {
-        try {
-            this.powerControl = this.getPower();
-            this.statusControl = this.getStatus();
-            this.inputSource = this.getInput();
+    private void setupData() {
+        this.powerControl = this.fetchData(Command.POWER, PowerControl.class);
+        this.statusControl = this.fetchData(Command.STATUS, StatusControl.class);
+        this.inputSource = this.fetchData(Command.INPUT_SOURCE, InputSource.class);
 
-            return true;
-        } catch (Exception e) {
-            this.logger.error(Constant.SET_UP_DATA_FAILED_3, e);
-            return false;
-        }
+        this.requestStateHandler.verifyAPIState();
     }
 
     /**
@@ -354,93 +354,6 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
     }
 
     /**
-     * This method is used to get the current display power status
-     *
-     * @return powerStatusNames This returns the calculated xor checksum.
-     */
-    private PowerControl getPower() throws Exception {
-        byte[] response = this.send(Util.buildSendString((byte) deviceId, Command.POWER.getCode()));
-        PowerControl power = (PowerControl) this.digestResponse(response, Command.POWER);
-
-        if (power == null) {
-            throw new Exception();
-        } else {
-            return power;
-        }
-    }
-
-    /**
-     * This method is used to send the power ON command to the display
-     */
-    private void powerON() throws IOException {
-        byte[] toSend = Util.buildSendString((byte) deviceId, Command.POWER.getCode(), new byte[] { PowerControl.ON.getCode() });
-        try {
-            byte[] response = send(toSend);
-
-            //digesting the response but voiding the result
-            digestResponse(response, Command.POWER);
-
-            //disconnect from the device and wait for 20 seconds as the device is unresponsive during this time
-            destroyChannel();
-            synchronized (this) {//synchronized block
-                Thread.sleep(20000);
-            }
-        } catch (Exception e) {
-            if (this.logger.isDebugEnabled()) {
-                this.logger.debug("error during power ON send", e);
-            }
-        }
-    }
-
-    /**
-     * This method is used to send the power OFF command to the display
-     */
-    private void powerOFF() throws IOException {
-        byte[] toSend = Util.buildSendString((byte) deviceId, Command.POWER.getCode(), new byte[] { PowerControl.OFF.getCode() });
-        try {
-            byte[] response = send(toSend);
-
-            digestResponse(response, Command.POWER);
-        } catch (Exception e) {
-            if (this.logger.isDebugEnabled()) {
-                this.logger.debug("error during power OFF send", e);
-            }
-        }
-    }
-
-    /**
-     * This method is used to get the current display input
-     *
-     * @return inputNames This returns the current input.
-     */
-    private InputSource getInput() throws Exception {
-        byte[] response = send(Util.buildSendString((byte) deviceId, Command.INPUT_SOURCE.getCode()));
-        InputSource input = (InputSource) digestResponse(response, Command.INPUT_SOURCE);
-
-        if (input == null) {
-            throw new Exception();
-        } else {
-            return input;
-        }
-    }
-
-    /**
-     * This method is used to get the status results from the display
-     *
-     * @return SamsungMDCStatus This returns the retrieved status results.
-     */
-    private StatusControl getStatus() throws Exception {
-        byte[] response = send(Util.buildSendString((byte) deviceId, Command.STATUS.getCode()));
-        StatusControl status = (StatusControl) digestResponse(response, Command.STATUS);
-
-        if (status == null) {
-            throw new Exception();
-        } else {
-            return status;
-        }
-    }
-
-    /**
      * Generates an {@link AdvancedControllableProperty} of type Switch with the specified name, labels, and value.
      *
      * @param switchName the name of the switch control property
@@ -472,6 +385,70 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         dropdown.setOptions(options);
 
         return new AdvancedControllableProperty(dropdownName, new Date(), dropdown, value);
+    }
+
+    /**
+     * Sends a request using the specified {@link Command} and parses the response into the given response type.
+     *
+     * <p>This method builds a request message based on the command and device ID,
+     * sends the request over a TCP connection, and attempts to parse the response into
+     * the specified response class. If an error occurs, appropriate error handling is performed,
+     * including logging and pushing error state to {@code requestStateHandler}.</p>
+     *
+     * @param command the command used to build the request.
+     * @param responseClass the class type to which the response should be cast.
+     * @param <T> the expected type of the response.
+     * @return the parsed response of type {@code T}, or {@code null} if an error occurs.
+     * @throws ResourceNotReachableException if a connection error occurs.
+     */
+    private <T> T fetchData(Command command, Class<T> responseClass) {
+        byte[] request = Util.buildSendString((byte) this.deviceId, command.getCode());
+        try {
+            byte[] response = super.send(request);
+
+            this.requestStateHandler.resolveError(command.name());
+            return responseClass.cast(this.digestResponse(response, command));
+        } catch (ConnectException e) {
+            throw new ResourceNotReachableException(e.getMessage(), e);
+        } catch (Exception e) {
+            this.requestStateHandler.pushError(command.name(), e);
+            this.logger.error(String.format(Constant.FETCH_DATA_FAILED, command, Arrays.toString(request)), e);
+            return null;
+        }
+    }
+
+    /**
+     * Performs a control operation by sending a specific command to the device.
+     *
+     * <p>This method builds the request payload using the given {@code command} and {@code requestByte},
+     * sends it to the device, and processes the response. If the command is {@code POWER} and the request byte
+     * is {@code ON}, the connection will be closed and the thread will wait for 20 seconds, as the device
+     * becomes temporarily unresponsive after powering on.</p>
+     *
+     * @param command the command to be executed (e.g., POWER, VOLUME, etc.)
+     * @param requestByte the specific byte value representing the control action (e.g., ON, OFF)
+     * @return the parsed response object from the device
+     * @throws ResourceNotReachableException if a connection error occurs while sending the request
+     * @throws NotImplementedException if an unexpected exception occurs during the operation
+     */
+    private Object performControlOperation(Command command, byte requestByte) {
+        byte[] request = Util.buildSendString((byte) this.deviceId, command.getCode(), new byte[] { requestByte });
+        try {
+            byte[] response = this.send(request);
+            Object digestResponse = this.digestResponse(response, command);
+            if (command == Command.POWER && requestByte == PowerControl.ON.getCode()) {
+                //  Disconnect from the device and wait for 20 seconds as the device is unresponsive during this time
+                this.destroyChannel();
+                Thread.sleep(20000);
+            }
+            return digestResponse;
+        } catch (ConnectException e) {
+            throw new ResourceNotReachableException(e.getMessage(), e);
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
+            this.logger.error(String.format(Constant.PERFORM_DATA_FAILED, command, Arrays.toString(request)));
+            throw new NotImplementedException(Constant.SET_COMMAND_FAILED, e);
+        }
     }
 
     /**
