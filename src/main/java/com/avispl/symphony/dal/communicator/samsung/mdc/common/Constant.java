@@ -44,9 +44,10 @@ public class Constant {
 
   //  Fail messages
   public static final String READ_PROPERTIES_FILE_FAILED = "Failed to load properties file: ";
-  public static final String SET_UP_DATA_FAILED_1 = "Failed to set up data for ";
-  public static final String SET_UP_DATA_FAILED_2 = "Failed to set up data for some reasons, returning the empty list";
-  public static final String SET_UP_DATA_FAILED_3 = "Failed to set up data for some reasons, returning the false value";
+  public static final String FETCH_DATA_FAILED = "Exception while fetching data. Command: %s,  Byte [%s]";
+  public static final String PERFORM_DATA_FAILED = "Exception while perform command. Command: %s, Byte [%s]";
+  public static final String SET_COMMAND_FAILED = "Failed to perform command.";
+  public static final String REQUEST_COMMANDS_FAILED = "Unable to process requested command sections: [%s], error reported: [%s]";
   public static final String MAP_TO_UPTIME_FAILED = "Failed to mapToUptime with uptime: ";
   public static final String MAP_TO_UPTIME_MIN_FAILED = "Failed to mapToUptimeMin with uptime: ";
   public static final String CONTROL_PROPERTY_FAILED = "Failed to control property: ";
