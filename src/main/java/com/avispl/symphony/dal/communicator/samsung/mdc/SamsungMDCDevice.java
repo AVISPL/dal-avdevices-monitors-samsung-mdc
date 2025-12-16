@@ -29,7 +29,6 @@ import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.dal.communicator.SocketCommunicator;
 import com.avispl.symphony.dal.communicator.samsung.mdc.common.Constant;
-import com.avispl.symphony.dal.communicator.samsung.mdc.common.RequestStateHandler;
 import com.avispl.symphony.dal.communicator.samsung.mdc.common.Util;
 import com.avispl.symphony.dal.communicator.samsung.mdc.models.StatusControl;
 import com.avispl.symphony.dal.communicator.samsung.mdc.types.Command;
@@ -72,10 +71,6 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      */
     private ExtendedStatistics localExtendedStatistics;
     /**
-     * Handles request state updates and error tracking.
-     */
-    private RequestStateHandler requestStateHandler;
-    /**
      * Represents the {@link PowerControl} of the adapter.
      */
     private PowerControl powerControl;
@@ -103,7 +98,6 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.adapterInitializationTimestamp = System.currentTimeMillis();
 
         this.localExtendedStatistics = new ExtendedStatistics();
-        this.requestStateHandler = new RequestStateHandler();
         this.powerControl = PowerControl.UNDEFINED;
         this.statusControl = new StatusControl();
         this.inputSource = InputSource.UNDEFINED;
@@ -219,7 +213,6 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.powerControl = null;
         this.statusControl = null;
         this.inputSource = null;
-        this.requestStateHandler = null;
         this.localExtendedStatistics = null;
         this.historicalProperties = null;
         super.internalDestroy();
@@ -249,8 +242,6 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         this.powerControl = this.fetchData(Command.POWER, PowerControl.class);
         this.statusControl = this.fetchData(Command.STATUS, StatusControl.class);
         this.inputSource = this.fetchData(Command.INPUT_SOURCE, InputSource.class);
-
-        this.requestStateHandler.verifyAPIState();
     }
 
     /**
@@ -393,7 +384,7 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
      * <p>This method builds a request message based on the command and device ID,
      * sends the request over a TCP connection, and attempts to parse the response into
      * the specified response class. If an error occurs, appropriate error handling is performed,
-     * including logging and pushing error state to {@code requestStateHandler}.</p>
+     * including logging.</p>
      *
      * @param command the command used to build the request.
      * @param responseClass the class type to which the response should be cast.
@@ -405,15 +396,12 @@ public class SamsungMDCDevice extends SocketCommunicator implements Controller, 
         byte[] request = Util.buildSendString((byte) this.deviceId, command.getCode());
         try {
             byte[] response = super.send(request);
-
-            this.requestStateHandler.resolveError(command.name());
             return responseClass.cast(this.digestResponse(response, command));
         } catch (ConnectException e) {
-            throw new ResourceNotReachableException(e.getMessage(), e);
+            throw new RuntimeException(String.format("Unable to process the command [%s]: please check the device configuration.", command.getCode()), e);
         } catch (Exception e) {
-            this.requestStateHandler.pushError(command.name(), e);
             this.logger.error(String.format(Constant.FETCH_DATA_FAILED, command, Arrays.toString(request)), e);
-            return null;
+            throw new RuntimeException(String.format("Unable to process the command [%s].", command.getCode()), e);
         }
     }
 
